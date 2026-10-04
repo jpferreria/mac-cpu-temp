@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# Build artifacts
+.build/
+build/
+*.o
+*.app
+DerivedData/
+*.swp
+*~
