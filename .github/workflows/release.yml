@@ -1,0 +1,33 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: macos-14
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build cpu-temp
+        run: |
+          make build
+          cd build
+          zip -r -y cpu-temp-${{ github.ref_name }}.zip cpu-temp.app
+          shasum -a 256 cpu-temp-${{ github.ref_name }}.zip > checksum.txt
+          echo "SHA256 Checksum:"
+          cat checksum.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/cpu-temp-${{ github.ref_name }}.zip
+            build/checksum.txt
+          generate_release_notes: true
