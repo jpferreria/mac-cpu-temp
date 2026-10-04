@@ -19,15 +19,15 @@ jobs:
         run: |
           make build
           cd build
-          zip -r -y cpu-temp-${{ github.ref_name }}.zip cpu-temp.app
-          shasum -a 256 cpu-temp-${{ github.ref_name }}.zip > checksum.txt
+          ZIP_NAME="cpu-temp-${{ github.ref_name }}.zip"
+          zip -r -y "${ZIP_NAME}" cpu-temp.app
+          shasum -a 256 "${ZIP_NAME}" > checksum.txt
           echo "SHA256 Checksum:"
           cat checksum.txt
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            build/cpu-temp-${{ github.ref_name }}.zip
-            build/checksum.txt
-          generate_release_notes: true
+      - name: Upload Release Assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd build
+          gh release upload "${{ github.ref_name }}" "cpu-temp-${{ github.ref_name }}.zip" checksum.txt --clobber
