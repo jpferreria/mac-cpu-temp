@@ -13,6 +13,10 @@ A native, ultra-lightweight macOS menu bar utility designed specifically for App
 
 Unlike older Intel Macs or battery-heavy command-line tools that rely on `sudo powermetrics`, **`cpu-temp`** directly queries Apple Silicon's hardware thermal sensors through `IOHIDEventSystemClient`. It runs entirely in user-space with **zero root privileges** and is engineered specifically to prevent battery drain on fanless MacBook Air laptops.
 
+<p align="center">
+  <img src="assets/screenshot.png" alt="cpu-temp running in macOS Menu Bar" width="340">
+</p>
+
 ```text
 [ Menu Bar Glance ]
 ┌──────────────────────────────────────────────┐
