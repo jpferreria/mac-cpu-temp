@@ -3,7 +3,7 @@ BUILD_DIR = build
 APP_BUNDLE = $(BUILD_DIR)/$(APP_NAME).app
 INSTALL_DIR = $(HOME)/Applications
 
-.PHONY: all build run install clean
+.PHONY: all build run install uninstall clean
 
 all: build
 
@@ -21,6 +21,11 @@ install: build
 	@rm -rf $(INSTALL_DIR)/$(APP_NAME).app
 	@cp -R $(APP_BUNDLE) $(INSTALL_DIR)/
 	@echo "Installed! You can launch $(APP_NAME) from Spotlight or $(INSTALL_DIR)."
+
+uninstall:
+	@echo "Removing $(APP_NAME).app from $(INSTALL_DIR)..."
+	@rm -rf $(INSTALL_DIR)/$(APP_NAME).app
+	@echo "Uninstalled successfully."
 
 clean:
 	@rm -rf $(BUILD_DIR)
