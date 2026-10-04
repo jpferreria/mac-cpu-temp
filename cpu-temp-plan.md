@@ -16,19 +16,19 @@
 
 ```mermaid
 flowchart TD
-    subgraph Core [Thermal Monitor Engine]
-        IOHID[IOHIDEventSystemClient (Usage: 0xff00:0x5)] -->|Query Sensors| Filter[Sensor Filter & Parser]
-        Filter -->|Extract °C| Aggregator[Aggregate: Max / E-Cores / P-Cores / GPU]
+    subgraph Core ["Thermal Monitor Engine"]
+        IOHID["IOHIDEventSystemClient (Usage: 0xff00:0x5)"] -->|"Query Sensors"| Filter["Sensor Filter & Parser"]
+        Filter -->|"Extract °C"| Aggregator["Aggregate: Max / E-Cores / P-Cores / GPU"]
     end
 
-    subgraph UI [Menu Bar Layer]
-        Timer[Coalesced Dispatch Timer (2s default)] --> Aggregator
-        Aggregator --> StatusItem[NSStatusItem in macOS Menu Bar]
-        StatusItem -->|Title & Image| Display["🌡️ {maxTemp}°C"]
-        StatusItem -->|User Click| Menu[NSMenu Dropdown]
+    subgraph UI ["Menu Bar Layer"]
+        Timer["Coalesced Dispatch Timer (2s default)"] --> Aggregator
+        Aggregator --> StatusItem["NSStatusItem in macOS Menu Bar"]
+        StatusItem -->|"Title & Image"| Display["🌡️ {maxTemp}°C"]
+        StatusItem -->|"User Click"| Menu["NSMenu Dropdown"]
     end
 
-    subgraph MenuDetails [Dropdown Details]
+    subgraph MenuDetails ["Dropdown Details"]
         Menu --> Details["Per-Core Temperatures & Sensors"]
         Menu --> Rate["Update Interval (1s / 2s / 5s)"]
         Menu --> Autostart["Launch at Login"]

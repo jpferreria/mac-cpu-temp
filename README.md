@@ -65,29 +65,29 @@ Unlike older Intel Macs or battery-heavy command-line tools that rely on `sudo p
 
 ```mermaid
 flowchart TD
-    subgraph Hardware [Apple Silicon Hardware]
-        SOC[SoC Die Sensors: PMU tdie1..14, PMU2 tdie1..10]
-        BAT[Battery Gas Gauge]
-        NAND[NAND Storage Temp]
+    subgraph Hardware ["Apple Silicon Hardware"]
+        SOC["SoC Die Sensors: PMU tdie1..14, PMU2 tdie1..10"]
+        BAT["Battery Gas Gauge"]
+        NAND["NAND Storage Temp"]
     end
 
-    subgraph Driver [IOKit / HID Subsystem]
-        IOHID[IOHIDEventSystemClient (Page: 0xff00, Usage: 0x5)]
+    subgraph Driver ["IOKit / HID Subsystem"]
+        IOHID["IOHIDEventSystemClient (Page: 0xff00, Usage: 0x5)"]
     end
 
-    subgraph App [cpu-temp.app (User Space)]
+    subgraph App ["cpu-temp.app (User Space)"]
         direction TB
-        Bridge[ThermalMonitor (Dynamic Type-Safe Bridge)]
-        Timer[Coalesced Dispatch Timer]
-        UI[AppDelegate / NSStatusItem]
-        Power[NSWorkspace Sleep & Wake Observers]
+        Bridge["ThermalMonitor (Dynamic Type-Safe Bridge)"]
+        Timer["Coalesced Dispatch Timer"]
+        UI["AppDelegate / NSStatusItem"]
+        Power["NSWorkspace Sleep & Wake Observers"]
     end
 
     SOC & BAT & NAND --> IOHID
     IOHID --> Bridge
-    Timer -->|Tick (1s / 2s / 5s)| Bridge
-    Power -->|Pause / Resume| Timer
-    Bridge -->|Filtered ThermalSnapshot| UI
+    Timer -->|"Tick (1s / 2s / 5s)"| Bridge
+    Power -->|"Pause / Resume"| Timer
+    Bridge -->|"Filtered ThermalSnapshot"| UI
 ```
 
 ### Why `IOHIDEventSystemClient`?
