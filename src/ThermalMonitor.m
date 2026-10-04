@@ -95,48 +95,56 @@ extern double IOHIDEventGetFloatValue(IOHIDEventRef event, int32_t field);
 }
 
 - (ThermalSnapshot *)currentSnapshot {
-    if (!_hidClient) {
-        [self setupClient];
+    @synchronized (self) {
         if (!_hidClient) {
-            return [[ThermalSnapshot alloc] init];
-        }
-    }
-
-    CFArrayRef services = IOHIDEventSystemClientCopyServices(_hidClient);
-    if (!services) {
-        // Retry client setup once in case of service restart
-        [self setupClient];
-        services = IOHIDEventSystemClientCopyServices(_hidClient);
-        if (!services) {
-            return [[ThermalSnapshot alloc] init];
-        }
-    }
-
-    CFIndex count = CFArrayGetCount(services);
-    NSMutableArray<SensorInfo *> *allSensors = [NSMutableArray arrayWithCapacity:count];
-    NSMutableArray<SensorInfo *> *cpuSensors = [NSMutableArray array];
-    NSMutableArray<SensorInfo *> *batterySensors = [NSMutableArray array];
-    NSMutableArray<SensorInfo *> *storageSensors = [NSMutableArray array];
-    NSMutableArray<SensorInfo *> *otherSensors = [NSMutableArray array];
-
-    double maxCPUTemp = 0.0;
-    double sumCPUTemp = 0.0;
-    NSInteger cpuCount = 0;
-
-    for (CFIndex i = 0; i < count; i++) {
-        IOHIDServiceClientRef s = (IOHIDServiceClientRef)CFArrayGetValueAtIndex(services, i);
-        CFStringRef product = (CFStringRef)IOHIDServiceClientCopyProperty(s, CFSTR("Product"));
-        NSString *name = product ? (__bridge_transfer NSString *)product : @"Unknown Sensor";
-
-        IOHIDEventRef event = IOHIDServiceClientCopyEvent(s, kIOHIDEventTypeTemperature, 0, 0);
-        if (event) {
-            double temp = IOHIDEventGetFloatValue(event, IOHIDEventFieldBase(kIOHIDEventTypeTemperature));
-            CFRelease(event);
-
-            // Filter out invalid readings (< 0 or > 125 C)
-            if (temp <= 0.0 || temp > 125.0) {
-                continue;
+            [self setupClient];
+            if (!_hidClient) {
+                return [[ThermalSnapshot alloc] init];
             }
+        }
+
+        CFArrayRef services = IOHIDEventSystemClientCopyServices(_hidClient);
+        if (!services) {
+            // Retry client setup once in case of service restart
+            [self setupClient];
+            services = IOHIDEventSystemClientCopyServices(_hidClient);
+            if (!services) {
+                return [[ThermalSnapshot alloc] init];
+            }
+        }
+
+        CFIndex count = CFArrayGetCount(services);
+        NSMutableArray<SensorInfo *> *allSensors = [NSMutableArray arrayWithCapacity:count];
+        NSMutableArray<SensorInfo *> *cpuSensors = [NSMutableArray array];
+        NSMutableArray<SensorInfo *> *batterySensors = [NSMutableArray array];
+        NSMutableArray<SensorInfo *> *storageSensors = [NSMutableArray array];
+        NSMutableArray<SensorInfo *> *otherSensors = [NSMutableArray array];
+
+        double maxCPUTemp = 0.0;
+        double sumCPUTemp = 0.0;
+        NSInteger cpuCount = 0;
+
+        for (CFIndex i = 0; i < count; i++) {
+            IOHIDServiceClientRef s = (IOHIDServiceClientRef)CFArrayGetValueAtIndex(services, i);
+            CFTypeRef rawProduct = IOHIDServiceClientCopyProperty(s, CFSTR("Product"));
+            NSString *name = @"Unknown Sensor";
+            if (rawProduct) {
+                if (CFGetTypeID(rawProduct) == CFStringGetTypeID()) {
+                    name = (__bridge_transfer NSString *)rawProduct;
+                } else {
+                    CFRelease(rawProduct);
+                }
+            }
+
+            IOHIDEventRef event = IOHIDServiceClientCopyEvent(s, kIOHIDEventTypeTemperature, 0, 0);
+            if (event) {
+                double temp = IOHIDEventGetFloatValue(event, IOHIDEventFieldBase(kIOHIDEventTypeTemperature));
+                CFRelease(event);
+
+                // Filter out NaN, infinity, or physically invalid readings (< 0 or > 125 C)
+                if (isnan(temp) || isinf(temp) || temp <= 0.0 || temp > 125.0) {
+                    continue;
+                }
 
             SensorCategory category = [self classifySensorName:name];
             SensorInfo *info = [[SensorInfo alloc] initWithName:name
@@ -185,7 +193,8 @@ extern double IOHIDEventGetFloatValue(IOHIDEventRef event, int32_t field);
     snapshot.otherSensors = otherSensors;
     snapshot.allSensors = allSensors;
 
-    return snapshot;
+        return snapshot;
+    }
 }
 
 @end

@@ -12,6 +12,8 @@ echo "==> Building ${APP_NAME}..."
 mkdir -p "${MACOS_DIR}" "${RESOURCES_DIR}"
 
 clang -fobjc-arc -O2 \
+    -Wall -Wextra -Wformat=2 -Wformat-security \
+    -fstack-protector-strong -D_FORTIFY_SOURCE=2 \
     -arch arm64 \
     -framework Cocoa \
     -framework IOKit \
@@ -25,9 +27,9 @@ clang -fobjc-arc -O2 \
 
 cp Info.plist "${APP_BUNDLE}/Contents/Info.plist"
 
-# Ad-hoc codesign for local execution
+# Ad-hoc codesign with hardened runtime for local execution
 if command -v codesign &>/dev/null; then
-    codesign --force --deep --sign - "${APP_BUNDLE}" 2>/dev/null || true
+    codesign --force --deep --sign - --options runtime "${APP_BUNDLE}" 2>/dev/null || true
 fi
 
 echo "==> Successfully built ${APP_BUNDLE}"

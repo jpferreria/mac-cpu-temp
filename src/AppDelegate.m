@@ -63,9 +63,10 @@ static NSString * const kPrefUseFahrenheit = @"UseFahrenheit";
 }
 
 - (NSString *)queryHardwareModel {
-    char model[256];
-    size_t size = sizeof(model);
+    char model[256] = {0};
+    size_t size = sizeof(model) - 1;
     if (sysctlbyname("hw.model", model, &size, NULL, 0) == 0) {
+        model[size] = '\0';
         return [NSString stringWithUTF8String:model];
     }
     return @"Apple Silicon Mac";
@@ -210,7 +211,8 @@ static NSString * const kPrefUseFahrenheit = @"UseFahrenheit";
                                                          keyEquivalent:@""];
     NSMenu *cpuSubmenu = [[NSMenu alloc] initWithTitle:@"SoC Sensors"];
     for (SensorInfo *sensor in self.latestSnapshot.cpuSensors) {
-        NSString *sTitle = [NSString stringWithFormat:@"%-20s  %@", [sensor.name UTF8String], [sensor formattedTemperatureWithUnit:self.useFahrenheit]];
+        const char *cName = sensor.name ? [sensor.name UTF8String] : "Unknown";
+        NSString *sTitle = [NSString stringWithFormat:@"%-24s  %@", cName, [sensor formattedTemperatureWithUnit:self.useFahrenheit]];
         NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:sTitle action:nil keyEquivalent:@""];
         item.enabled = NO;
         [cpuSubmenu addItem:item];
@@ -225,7 +227,8 @@ static NSString * const kPrefUseFahrenheit = @"UseFahrenheit";
                                                         keyEquivalent:@""];
         NSMenu *otherSubmenu = [[NSMenu alloc] initWithTitle:@"Other Sensors"];
         for (SensorInfo *sensor in self.latestSnapshot.otherSensors) {
-            NSString *sTitle = [NSString stringWithFormat:@"%-20s  %@", [sensor.name UTF8String], [sensor formattedTemperatureWithUnit:self.useFahrenheit]];
+            const char *cName = sensor.name ? [sensor.name UTF8String] : "Unknown";
+            NSString *sTitle = [NSString stringWithFormat:@"%-24s  %@", cName, [sensor formattedTemperatureWithUnit:self.useFahrenheit]];
             NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:sTitle action:nil keyEquivalent:@""];
             item.enabled = NO;
             [otherSubmenu addItem:item];
@@ -321,6 +324,16 @@ static NSString * const kPrefUseFahrenheit = @"UseFahrenheit";
     [NSApp terminate:nil];
 }
 
+- (void)dealloc {
+    [[[NSWorkspace sharedWorkspace] notificationCenter] removeObserver:self];
+    [self stopTimer];
+}
+
+- (void)applicationWillTerminate:(NSNotification *)notification {
+    [[[NSWorkspace sharedWorkspace] notificationCenter] removeObserver:self];
+    [self stopTimer];
+}
+
 #pragma mark - Launch at Login
 
 - (BOOL)isLaunchAtLoginEnabled {
@@ -336,9 +349,13 @@ static NSString * const kPrefUseFahrenheit = @"UseFahrenheit";
         SMAppService *service = [SMAppService mainAppService];
         NSError *error = nil;
         if (service.status == SMAppServiceStatusEnabled) {
-            [service unregisterAndReturnError:&error];
+            if (![service unregisterAndReturnError:&error]) {
+                NSLog(@"[cpu-temp] Failed to unregister from login items: %@", error.localizedDescription);
+            }
         } else {
-            [service registerAndReturnError:&error];
+            if (![service registerAndReturnError:&error]) {
+                NSLog(@"[cpu-temp] Failed to register as login item: %@", error.localizedDescription);
+            }
         }
     }
 }
