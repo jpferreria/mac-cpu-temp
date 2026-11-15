@@ -1,5 +1,6 @@
 #import "AppDelegate.h"
 #import "ThermalMonitor.h"
+#import "ThermalInsightEngine.h"
 #import <ServiceManagement/ServiceManagement.h>
 #import <sys/sysctl.h>
 
@@ -60,6 +61,15 @@ static NSString * const kPrefUseFahrenheit = @"UseFahrenheit";
     // Perform initial read and start timer
     [self updateTemperature];
     [self startTimer];
+
+    // Initialize App Intents for Apple Intelligence & Siri
+    Class bootstrapClass = NSClassFromString(@"_TtC14CPUTempIntents19AppIntentsBootstrap");
+    if (bootstrapClass && [bootstrapClass respondsToSelector:@selector(initializeIntents)]) {
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+        [bootstrapClass performSelector:@selector(initializeIntents)];
+        #pragma clang diagnostic pop
+    }
 }
 
 - (NSString *)queryHardwareModel {
@@ -99,6 +109,7 @@ static NSString * const kPrefUseFahrenheit = @"UseFahrenheit";
 
 - (void)updateTemperature {
     self.latestSnapshot = [[ThermalMonitor sharedMonitor] currentSnapshot];
+    [[ThermalInsightEngine sharedEngine] recordSnapshot:self.latestSnapshot];
     double maxCelsius = self.latestSnapshot.maxCPUTemp;
 
     if (maxCelsius <= 0.0) {
@@ -202,6 +213,40 @@ static NSString * const kPrefUseFahrenheit = @"UseFahrenheit";
         nandItem.enabled = NO;
         [menu addItem:nandItem];
     }
+
+    [menu addItem:[NSMenuItem separatorItem]];
+
+    // 2b. Apple Intelligence & Thermal Insights
+    ThermalInsight *insight = [[ThermalInsightEngine sharedEngine] currentInsight];
+    NSMenuItem *aiHeader = [[NSMenuItem alloc] initWithTitle:@"Apple Intelligence & Insights" action:nil keyEquivalent:@""];
+    aiHeader.enabled = NO;
+    [menu addItem:aiHeader];
+
+    NSMenuItem *stateItem = [[NSMenuItem alloc] initWithTitle:[NSString stringWithFormat:@"Thermal State:        %@ (Headroom: %.0f°C)", insight.stateDescription, insight.thermalHeadroom]
+                                                       action:nil
+                                                keyEquivalent:@""];
+    stateItem.enabled = NO;
+    [menu addItem:stateItem];
+
+    NSMenuItem *trendItem = [[NSMenuItem alloc] initWithTitle:[NSString stringWithFormat:@"Thermal Trend:        %@", insight.trendDescription]
+                                                       action:nil
+                                                keyEquivalent:@""];
+    trendItem.enabled = NO;
+    [menu addItem:trendItem];
+
+    NSMenuItem *recItem = [[NSMenuItem alloc] initWithTitle:[NSString stringWithFormat:@"Diagnostic:             %@", insight.recommendedAction]
+                                                     action:nil
+                                              keyEquivalent:@""];
+    recItem.enabled = NO;
+    [menu addItem:recItem];
+
+    NSMenuItem *copyItem = [[NSMenuItem alloc] initWithTitle:@"Copy AI Diagnostics (JSON)" action:@selector(copyDiagnostics:) keyEquivalent:@"c"];
+    copyItem.target = self;
+    [menu addItem:copyItem];
+
+    NSMenuItem *siriHint = [[NSMenuItem alloc] initWithTitle:@"Voice: \"Hey Siri, what's my CPU temp?\"" action:nil keyEquivalent:@""];
+    siriHint.enabled = NO;
+    [menu addItem:siriHint];
 
     [menu addItem:[NSMenuItem separatorItem]];
 
@@ -317,6 +362,13 @@ static NSString * const kPrefUseFahrenheit = @"UseFahrenheit";
 
 - (void)refreshNow:(id)sender {
     [self updateTemperature];
+}
+
+- (void)copyDiagnostics:(id)sender {
+    ThermalInsight *insight = [[ThermalInsightEngine sharedEngine] currentInsight];
+    NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
+    [pasteboard clearContents];
+    [pasteboard setString:[insight jsonString] forType:NSPasteboardTypeString];
 }
 
 - (void)quitApp:(id)sender {

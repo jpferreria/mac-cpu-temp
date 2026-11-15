@@ -57,6 +57,11 @@ Unlike older Intel Macs or battery-heavy command-line tools that rely on `sudo p
   - Max and average CPU/SoC die temperatures.
   - Battery pack and storage (NAND flash) thermals.
   - Full per-sensor inspector submenu listing all active hardware channels (`PMU tdie*`, etc.).
+- **Apple Intelligence & Siri Integration**:
+  - Native **App Intents** & **App Shortcuts** registered for voice and text prompts (*"Hey Siri, what's my CPU temperature?"*, *"Is my Mac overheating?"*).
+  - **Smart Thermal Insights Engine**: Computes thermal velocity (°C/min), operational state (Normal/Warm/Elevated/High/Critical), and headroom before throttling.
+  - **AI Diagnostics Export**: One-click "Copy AI Diagnostics (JSON)" in the menu bar to paste live system telemetry directly into LLMs for troubleshooting.
+  - **CLI & Automation Ready**: Supports `--status`, `--json`, and `--temp` flags for integration with macOS Shortcuts, terminal scripts, or Raycast/Alfred.
 - **Configurable Settings**:
   - Refresh rates: `1s` (Fast), `2s` (Default), or `5s` (Power Saver).
   - Units: Toggle between Celsius (`°C`) and Fahrenheit (`°F`).
@@ -132,6 +137,19 @@ Launch the application directly in the menu bar:
 make run
 ```
 
+### CLI & Shortcuts Queries
+Query thermal metrics directly from the command line, Shortcuts, or automation scripts without opening a window:
+```bash
+# Print natural language Apple Intelligence summary
+./build/cpu-temp.app/Contents/MacOS/cpu-temp --status
+
+# Print raw numeric temperature in Celsius
+./build/cpu-temp.app/Contents/MacOS/cpu-temp --temp
+
+# Output full JSON telemetry for AI models or scripts
+./build/cpu-temp.app/Contents/MacOS/cpu-temp --json
+```
+
 ### Install
 Copy to your user applications folder (`~/Applications`):
 ```bash
@@ -151,16 +169,19 @@ make uninstall
 
 ```text
 .
-├── Makefile                # Build, run, install, uninstall, and clean targets
-├── build.sh                # Hardened build script creating cpu-temp.app
-├── Info.plist              # Bundle metadata (LSUIElement = true)
-├── README.md               # Documentation and architecture guide
-├── cpu-temp-plan.md        # Architectural roadmap and design decisions
+├── Makefile                   # Build, run, test, install, uninstall targets
+├── build.sh                   # Hardened build script creating cpu-temp.app
+├── Info.plist                 # Bundle metadata (LSUIElement = true)
+├── README.md                  # Documentation and architecture guide
+├── cpu-temp-plan.md           # Architectural roadmap and design decisions
 └── src/
-    ├── main.m              # App bootstrap and accessory activation policy
-    ├── AppDelegate.h/m     # Menu bar item, dynamic dropdown, and sleep observer
-    ├── ThermalMonitor.h/m  # IOHID thermal sensor scanner & classifier
-    └── SensorInfo.h/m      # Sensor model and temperature unit formatting
+    ├── main.m                 # App bootstrap, CLI flags, & accessory policy
+    ├── AppDelegate.h/m        # Menu bar item, dynamic dropdown, & sleep observer
+    ├── ThermalMonitor.h/m     # IOHID thermal sensor scanner & classifier
+    ├── SensorInfo.h/m         # Sensor model and temperature unit formatting
+    ├── ThermalInsightEngine.h/m # Smart thermal rate, headroom, & AI summaries
+    ├── CPUTempIntents.swift   # Apple Intelligence App Intents & Siri Shortcuts
+    └── BridgingHeader.h       # ObjC-to-Swift bridging interface
 ```
 
 ---

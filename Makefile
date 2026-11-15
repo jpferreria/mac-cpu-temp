@@ -3,13 +3,19 @@ BUILD_DIR = build
 APP_BUNDLE = $(BUILD_DIR)/$(APP_NAME).app
 INSTALL_DIR = $(HOME)/Applications
 
-.PHONY: all build run install uninstall clean
+.PHONY: all build run test install uninstall clean
 
 all: build
 
 build:
 	@chmod +x build.sh
 	@./build.sh
+
+test: build
+	@echo "Testing $(APP_NAME) CLI & Apple Intelligence queries..."
+	@$(APP_BUNDLE)/Contents/MacOS/$(APP_NAME) --status
+	@$(APP_BUNDLE)/Contents/MacOS/$(APP_NAME) --json > /dev/null
+	@echo "All tests passed!"
 
 run: build
 	@echo "Starting $(APP_NAME) in background..."
