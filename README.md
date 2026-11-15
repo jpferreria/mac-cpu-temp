@@ -1,10 +1,12 @@
 # cpu-temp
 
-A native, ultra-lightweight macOS menu bar utility designed specifically for Apple Silicon (MacBook Air & MacBook Pro). Displays real-time CPU and SoC die temperatures in Celsius with a dynamic status bar icon.
+A native, ultra-lightweight macOS menu bar utility designed specifically for Apple Silicon (MacBook Air & MacBook Pro). Displays real-time CPU and SoC die temperatures in Celsius with a dynamic status bar icon, Apple Intelligence insights, and native Siri App Intents.
 
 [![Platform: macOS](https://img.shields.io/badge/platform-macOS%2012.0%2B-blue.svg)](https://apple.com/macos)
 [![Architecture: arm64](https://img.shields.io/badge/arch-Apple%20Silicon%20(M1--M4)-brightgreen.svg)]()
 [![Permissions: Zero Root](https://img.shields.io/badge/permissions-zero%20root%20%2F%20no%20sudo-success.svg)]()
+[![Release](https://img.shields.io/github/v/release/jpferreria/mac-cpu-temp?color=blue)](https://github.com/jpferreria/mac-cpu-temp/releases)
+[![Homebrew Cask](https://img.shields.io/badge/homebrew-cask-orange.svg)](https://github.com/jpferreria/homebrew-tap)
 [![License: MIT](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)
 
 ---
@@ -20,19 +22,26 @@ Unlike older Intel Macs or battery-heavy command-line tools that rely on `sudo p
 ```text
 [ Menu Bar Glance ]
 ┌──────────────────────────────────────────────┐
-│  ...  [🔋 92%]  [📶]  [ 🌡️ 44°C ]  Sun Oct 4 │
+│  ...  [🔋 92%]  [📶]  [ 🌡️ 36°C ]  Sun Oct 4 │
 └───────────────────────────┬──────────────────┘
                             │ (Click)
 ┌───────────────────────────▼──────────────────────────┐
-│  cpu-temp  •  MacBook Air (Apple Silicon)            │
+│  cpu-temp  •  Mac16,12 (Apple Silicon)               │
 ├──────────────────────────────────────────────────────┤
-│  Max CPU Temp:       44.5°C                          │
-│  Average SoC Temp:  41.2°C                          │
-│  Battery Temp:       35.0°C                          │
-│  Storage (NAND):    38.0°C                          │
+│  Max CPU Temp:       36.8°C                          │
+│  Average SoC Temp:  35.8°C                          │
+│  Battery Temp:       33.0°C                          │
+│  Storage (NAND):    35.0°C                          │
+├──────────────────────────────────────────────────────┤
+│  Apple Intelligence & Insights                       │
+│  Thermal State:     Normal (Headroom: 63°C)          │
+│  Thermal Trend:     Stable (±0°C/min)                │
+│  Diagnostic:        Safe thermal envelope for ...    │
+│  Copy AI Diagnostics (JSON)                       ⌘C │
+│  Voice: "Hey Siri, what's my CPU temp?"              │
 ├──────────────────────────────────────────────────────┤
 │  SoC Sensors (24)                                  ▶ │
-│  Other Sensors (19)                                ▶ │
+│  Other Sensors (12)                                ▶ │
 ├──────────────────────────────────────────────────────┤
 │  Update Interval                                   ▶ │
 │  Temperature Unit                                  ▶ │
@@ -47,7 +56,12 @@ Unlike older Intel Macs or battery-heavy command-line tools that rely on `sudo p
 
 ## Key Features
 
-- **Menu Bar Display**: Real-time temperature readout (e.g., `45°C`) with an adaptive SF Symbol thermometer icon (`thermometer.low`, `thermometer.medium`, `thermometer.high`).
+- **Menu Bar Display**: Real-time temperature readout (e.g., `36°C`) with an adaptive SF Symbol thermometer icon (`thermometer.low`, `thermometer.medium`, `thermometer.high`).
+- **Apple Intelligence & Siri Integration**:
+  - Native **App Intents** & **App Shortcuts** registered for voice and text prompts (*"Hey Siri, what's my CPU temperature?"*, *"Is my Mac overheating?"*).
+  - **Smart Thermal Insights Engine**: Computes thermal velocity (°C/min), operational state (`Normal`, `Warm`, `Elevated`, `High`, `Critical`), and safe headroom before thermal throttling.
+  - **AI Diagnostics Export**: One-click "Copy AI Diagnostics (JSON)" (`⌘C`) in the menu bar to paste live system telemetry directly into LLMs (ChatGPT, Claude, Gemini) for troubleshooting.
+  - **CLI & Automation Ready**: Supports `--status`, `--json`, and `--temp` flags for integration with macOS Shortcuts, terminal scripts, or Raycast/Alfred.
 - **No Root / No `sudo` Needed**: Communicates directly with Apple's HID thermal services (`0xff00:0x5`) without running continuous background helper daemons.
 - **Battery-Friendly (MacBook Air Optimized)**:
   - **< 0.1% CPU consumption** and **< 10 MB memory footprint**.
@@ -57,11 +71,6 @@ Unlike older Intel Macs or battery-heavy command-line tools that rely on `sudo p
   - Max and average CPU/SoC die temperatures.
   - Battery pack and storage (NAND flash) thermals.
   - Full per-sensor inspector submenu listing all active hardware channels (`PMU tdie*`, etc.).
-- **Apple Intelligence & Siri Integration**:
-  - Native **App Intents** & **App Shortcuts** registered for voice and text prompts (*"Hey Siri, what's my CPU temperature?"*, *"Is my Mac overheating?"*).
-  - **Smart Thermal Insights Engine**: Computes thermal velocity (°C/min), operational state (Normal/Warm/Elevated/High/Critical), and headroom before throttling.
-  - **AI Diagnostics Export**: One-click "Copy AI Diagnostics (JSON)" in the menu bar to paste live system telemetry directly into LLMs for troubleshooting.
-  - **CLI & Automation Ready**: Supports `--status`, `--json`, and `--temp` flags for integration with macOS Shortcuts, terminal scripts, or Raycast/Alfred.
 - **Configurable Settings**:
   - Refresh rates: `1s` (Fast), `2s` (Default), or `5s` (Power Saver).
   - Units: Toggle between Celsius (`°C`) and Fahrenheit (`°F`).
@@ -87,22 +96,106 @@ flowchart TD
     subgraph App ["cpu-temp.app (User Space)"]
         direction TB
         Bridge["ThermalMonitor (Dynamic Type-Safe Bridge)"]
+        Engine["ThermalInsightEngine (Velocity, Headroom, Diagnosis)"]
+        Intents["CPUTempIntents (Swift App Intents & Siri Shortcuts)"]
         Timer["Coalesced Dispatch Timer"]
         UI["AppDelegate / NSStatusItem"]
         Power["NSWorkspace Sleep & Wake Observers"]
     end
 
+    subgraph SystemAI ["Apple Intelligence & Automation"]
+        Siri["Siri Voice / Type to Siri"]
+        Shortcuts["macOS Shortcuts & CLI"]
+    end
+
     SOC & BAT & NAND --> IOHID
     IOHID --> Bridge
+    Bridge --> Engine
     Timer -->|"Tick (1s / 2s / 5s)"| Bridge
     Power -->|"Pause / Resume"| Timer
-    Bridge -->|"Filtered ThermalSnapshot"| UI
+    Engine --> UI
+    Engine <--> Intents
+    Intents <--> Siri & Shortcuts
 ```
 
-### Why `IOHIDEventSystemClient`?
-1. **`powermetrics`**: Requires `sudo` and spawns heavy sampling routines that defeat the purpose of monitoring a fanless MacBook Air.
-2. **`AppleSMC`**: Deprecated on modern Apple Silicon architectures, with many sensor keys unpopulated.
-3. **`IOHIDEventSystemClient`**: Fast (sub-millisecond sampling), official user-space framework, and provides granular per-sensor telemetry across the M1, M2, M3, and M4 generations.
+---
+
+## Installation & Usage
+
+### 1. Install via Homebrew (Recommended)
+
+You can install `cpu-temp` directly via Homebrew Cask:
+
+```bash
+brew install --cask jpferreria/tap/cpu-temp
+```
+
+*If macOS Gatekeeper shows an unverified developer warning:*
+```bash
+xattr -cr /Applications/cpu-temp.app
+```
+
+---
+
+### 2. Build & Install from Source
+
+#### Prerequisites
+- macOS 12.0 Monterey or newer (tested through macOS 15+ / macOS 26+).
+- Apple Silicon Mac (`arm64`: M1, M2, M3, M4).
+- Xcode Command Line Tools (`xcode-select --install`).
+
+#### Build & Run
+```bash
+# Clone the repository
+git clone https://github.com/jpferreria/mac-cpu-temp.git
+cd mac-cpu-temp
+
+# Build the app bundle
+make build
+
+# Run in background
+make run
+
+# Install to ~/Applications (searchable in Spotlight / Raycast)
+make install
+```
+
+#### Run Automated Verification Tests
+```bash
+make test
+```
+
+---
+
+### 3. CLI & Shortcuts Automation
+
+Query thermal metrics directly from the command line, Shortcuts, or automation scripts without opening a window:
+
+```bash
+# Print natural language Apple Intelligence summary
+/Applications/cpu-temp.app/Contents/MacOS/cpu-temp --status
+
+# Print raw numeric temperature in Celsius
+/Applications/cpu-temp.app/Contents/MacOS/cpu-temp --temp
+
+# Output full JSON telemetry for AI models or scripts
+/Applications/cpu-temp.app/Contents/MacOS/cpu-temp --json
+```
+
+**Example JSON Output:**
+```json
+{
+  "state" : "Normal",
+  "currentTempCelsius" : 36.8,
+  "averageTempCelsius" : 35.8,
+  "thermalHeadroomCelsius" : 63.2,
+  "rateOfChangePerMinute" : 0.0,
+  "trend" : "Stable",
+  "summary" : "Your CPU is at 37°C (Normal) and temperature is stable. Thermal headroom is 63°C before throttling.",
+  "recommendation" : "Safe thermal envelope for fanless operation.",
+  "sensorCount" : 43
+}
+```
 
 ---
 
@@ -110,58 +203,10 @@ flowchart TD
 
 The codebase was audited and compiled with strict security measures:
 - **Hardened Runtime**: Signed with macOS `codesign --options runtime` to satisfy modern Gatekeeper integrity.
-- **Type-Safe CF Bridging**: Safely inspects CoreFoundation type IDs (`CFGetTypeID(val) == CFStringGetTypeID()`) prior to bridging to prevent objective-C selector crashes from driver anomalies.
+- **Type-Safe CF Bridging**: Safely inspects CoreFoundation type IDs (`CFGetTypeID(val) == CFStringGetTypeID()`) prior to bridging to prevent Objective-C selector crashes from driver anomalies.
 - **Sanitized String & Buffer Handling**: Zeroed `sysctl` buffers with enforced null termination, and fallback protection against format string attacks.
 - **Thread Synchronization**: Guarded with `@synchronized (self)` to prevent race conditions during rapid sleep/wake transitions.
 - **Compiler Protections**: Built with `-Wall -Wextra -Wformat=2 -Wformat-security -fstack-protector-strong -D_FORTIFY_SOURCE=2`.
-
----
-
-## Installation & Usage
-
-### Prerequisites
-- macOS 12.0 Monterey or newer (tested through macOS 15+ / 27.0).
-- Apple Silicon Mac (`arm64`: M1, M2, M3, M4).
-- Xcode Command Line Tools (`xcode-select --install`).
-
-### Build
-Compile the application bundle:
-```bash
-make build
-```
-This produces `build/cpu-temp.app`.
-
-### Run
-Launch the application directly in the menu bar:
-```bash
-make run
-```
-
-### CLI & Shortcuts Queries
-Query thermal metrics directly from the command line, Shortcuts, or automation scripts without opening a window:
-```bash
-# Print natural language Apple Intelligence summary
-./build/cpu-temp.app/Contents/MacOS/cpu-temp --status
-
-# Print raw numeric temperature in Celsius
-./build/cpu-temp.app/Contents/MacOS/cpu-temp --temp
-
-# Output full JSON telemetry for AI models or scripts
-./build/cpu-temp.app/Contents/MacOS/cpu-temp --json
-```
-
-### Install
-Copy to your user applications folder (`~/Applications`):
-```bash
-make install
-```
-Once installed, `cpu-temp` is immediately searchable in **Spotlight** or **Raycast** (`Cmd + Space` &rarr; type `cpu-temp`).
-
-### Uninstall
-Remove the application bundle:
-```bash
-make uninstall
-```
 
 ---
 
@@ -179,21 +224,26 @@ make uninstall
     ├── AppDelegate.h/m        # Menu bar item, dynamic dropdown, & sleep observer
     ├── ThermalMonitor.h/m     # IOHID thermal sensor scanner & classifier
     ├── SensorInfo.h/m         # Sensor model and temperature unit formatting
-    ├── ThermalInsightEngine.h/m # Smart thermal rate, headroom, & AI summaries
+    ├── ThermalInsightEngine.h/m # Smart thermal velocity, headroom, & AI summaries
     ├── CPUTempIntents.swift   # Apple Intelligence App Intents & Siri Shortcuts
     └── BridgingHeader.h       # ObjC-to-Swift bridging interface
 ```
 
 ---
 
-## Troubleshooting
+## Troubleshooting & FAQ
 
 - **Icon not visible in menu bar?**
-  If your menu bar has many icons or a MacBook display notch, macOS may hide trailing status items. Hold `Cmd` and drag `cpu-temp` to the right side of the menu bar.
+  If your menu bar has many icons or a MacBook display camera notch, macOS may hide trailing status items. Hold `Cmd (⌘)` and drag `cpu-temp` to the right side of the menu bar.
 - **How to quit?**
   Click the `cpu-temp` icon in the menu bar and select **Quit cpu-temp** or press `⌘Q`.
 - **Does it require internet access?**
   No. `cpu-temp` makes zero network requests and does not link any network frameworks.
+- **How to uninstall?**
+  ```bash
+  brew uninstall --cask cpu-temp
+  # Or: make uninstall
+  ```
 
 ---
 
